@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MockInterview - AI 模拟面试平台</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <nav class="nav">
+    <div class="nav-logo">
+      <div class="logo-icon">MI</div>
+      <span>MockInterview</span>
+    </div>
+    <div class="nav-user">
+      <span class="nav-user-email" id="navEmail"></span>
+      <div class="nav-avatar" id="navAvatar">?</div>
+      <button class="nav-logout" onclick="logout()">退出</button>
+    </div>
+  </nav>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ============ 准备页 ============ -->
+  <div class="page active" id="page-prep">
+    <div class="main">
+      <div class="step-indicator">
+        <div class="step-dot active">1</div><div class="step-line active"></div>
+        <div class="step-dot">2</div><div class="step-line"></div>
+        <div class="step-dot">3</div>
+      </div>
+
+      <h1 class="page-title">面试准备</h1>
+      <p class="page-sub">调试设备、填写信息，一切就绪后进入面试间。</p>
+
+      <!-- 设备检测 -->
+      <div class="card">
+        <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <span class="card-title" style="margin:0;">🎛 设备调试</span>
+          <span class="tag tag-warning" id="deviceHint">需同时开启摄像头和麦克风</span>
+        </div>
+
+        <div class="device-grid">
+          <div class="device-panel" id="cameraPanel">
+            <div class="device-header">
+              <span class="device-name">📷 摄像头</span>
+              <span class="device-status pending" id="cameraStatus">未检测</span>
+            </div>
+            <video class="device-screen" id="cameraPreview" autoplay muted playsinline></video>
+            <div class="device-placeholder hidden" id="cameraPlaceholder">
+              <div style="font-size:38px;">📷</div>
+              <div>摄像头未开启</div>
+            </div>
+            <div class="device-actions">
+              <button class="btn btn-secondary" id="cameraBtn" onclick="detectCamera()">检测摄像头</button>
+            </div>
+          </div>
+
+          <div class="device-panel" id="micPanel">
+            <div class="device-header">
+              <span class="device-name">🎤 麦克风</span>
+              <span class="device-status pending" id="micStatus">未检测</span>
+            </div>
+            <div class="device-placeholder" id="micPlaceholder">
+              <div class="voice-wave" id="micWave" style="opacity:0.2;">
+                <div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div>
+                <div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div>
+              </div>
+              <div id="micHintText">麦克风未开启</div>
+            </div>
+            <div class="device-actions">
+              <button class="btn btn-secondary" id="micBtn" onclick="detectMic()">检测麦克风</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 简历 -->
+      <div class="card">
+        <div class="card-title">📄 简历</div>
+        <div class="upload-area" id="resumeUpload" onclick="document.getElementById('resumeFile').click()">
+          <div class="upload-icon">📄</div>
+          <div class="upload-text">
+            <strong>点击上传</strong> 简历文件（PDF / DOCX / TXT，最大 10MB）
+          </div>
+          <div class="file-info" id="fileInfo">
+            <span>✅</span>
+            <span class="file-info-name" id="fileName"></span>
+          </div>
+          <input type="file" id="resumeFile" accept=".pdf,.docx,.txt" style="display:none" onchange="handleResumeFile(event)">
+        </div>
+        <div class="form-group" style="margin-top:16px;margin-bottom:0;">
+          <label class="form-label">或直接粘贴简历文字</label>
+          <textarea class="form-input" id="resumeTextInput" placeholder="粘贴简历内容（解析失败或扫描版 PDF 时可用）" style="min-height:120px;"></textarea>
+        </div>
+      </div>
+
+      <!-- 公司与岗位 -->
+      <div class="card">
+        <div class="card-title">🏢 公司与岗位信息</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">公司名称 *</label>
+            <input class="form-input" id="companyInput" placeholder="如：字节跳动">
+          </div>
+          <div class="form-group">
+            <label class="form-label">目标岗位 *</label>
+            <input class="form-input" id="roleInput" placeholder="如：高级前端开发工程师">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">岗位要求 (JD)</label>
+          <textarea class="form-input" id="jdInput" placeholder="粘贴岗位描述/招聘要求，帮助 AI 定制题目" style="min-height:100px;"></textarea>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-lg" id="enterBtn" onclick="enterInterview()" style="width:100%;" disabled>
+        🚀 生成题目并进入面试
+      </button>
+      <div style="text-align:center;margin-top:12px;color:var(--text-muted);font-size:13px;" id="enterHint"></div>
+    </div>
+  </div>
+
+  <!-- ============ 面试间 ============ -->
+  <div class="page" id="page-interview">
+    <div class="interview-room">
+      <div class="stage">
+        <div class="stage-video">
+          <div class="interviewer-visual">
+            <div class="interviewer-avatar-lg" id="interviewerAvatar">🧑‍💼</div>
+            <div class="interviewer-name-lg">AI 面试官</div>
+            <div class="interviewer-role-lg" id="interviewerRole">技术面试 · 等待开始</div>
+            <div class="voice-wave hidden" id="speakingWave">
+              <div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div>
+              <div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div>
+            </div>
+          </div>
+        </div>
+        <span class="video-label">面试官 · AI</span>
+
+        <div class="pip">
+          <video id="myVideo" autoplay muted playsinline></video>
+          <span class="video-label">我</span>
+        </div>
+      </div>
+
+      <div class="interview-dock">
+        <div class="dock-subtitle">
+          <div class="q-label" id="questionLabel">第 1 题 / 共 5 题</div>
+          <div class="q-text" id="questionText">正在加载题目...</div>
+          <div class="transcript-box" id="transcriptBox">点击「开始回答」后，说出你的答案，这里会实时转写。</div>
+        </div>
+
+        <div class="dock-controls">
+          <div class="dock-timer" id="questionTimer">02:00</div>
+          <div class="dock-progress">
+            <div class="dock-progress-fill" id="questionProgress" style="width:0%;"></div>
+          </div>
+          <div class="dock-buttons">
+            <button class="btn btn-secondary" id="replayBtn" onclick="replayQuestion()">🔊 播题</button>
+            <button class="btn btn-primary" id="answerBtn" onclick="toggleAnswer()">🎤 回答</button>
+            <button class="btn btn-outline btn-full" id="nextBtn" onclick="nextQuestion()" disabled>下一题 →</button>
+            <button class="btn btn-danger btn-full" onclick="endInterview()">⏹ 结束面试</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 结果页 ============ -->
+  <div class="page" id="page-result">
+    <div class="main">
+      <h1 class="page-title">面试总结报告</h1>
+      <p class="page-sub" id="resultMeta"></p>
+
+      <div class="result-hero">
+        <div class="hero-score-wrap">
+          <div>
+            <div class="hero-score" id="heroScore">--</div>
+            <div class="hero-score-label">综合评分 / 100</div>
+          </div>
+        </div>
+        <div class="hero-meta">
+          <h3>面试表现评估</h3>
+          <p id="heroMetaText">AI 面试官根据你的全程回答生成</p>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="summary-title">🕸 能力雷达</div>
+          <div class="radar-wrap">
+            <svg id="radarChart" width="300" height="300" viewBox="0 0 300 300"></svg>
+          </div>
+        </div>
+        <div class="card">
+          <div class="summary-title">📝 综合评语</div>
+          <div class="summary-text" id="summaryText"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="summary-title">📈 维度分析</div>
+        <div id="dimensionAnalysis"></div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="summary-title" style="color:var(--success);">✅ 优势</div>
+          <ul class="list" id="strengthsList"></ul>
+        </div>
+        <div class="card">
+          <div class="summary-title" style="color:var(--danger);">⚠️ 不足</div>
+          <ul class="list" id="weaknessesList"></ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="summary-title" style="color:var(--warning);">💡 改进建议</div>
+        <ul class="list" id="suggestionsList"></ul>
+      </div>
+
+      <div class="card">
+        <div class="summary-title">🗂 逐题点评</div>
+        <div id="perQuestionList"></div>
+      </div>
+
+      <div class="card">
+        <div class="summary-title">🕘 历史面试</div>
+        <div id="historyList"></div>
+      </div>
+
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:8px;">
+        <button class="btn btn-primary" onclick="restart()">🔄 再来一次</button>
+        <button class="btn btn-secondary" onclick="showPage('prep')">返回准备页</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

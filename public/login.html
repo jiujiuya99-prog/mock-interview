@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 - MockInterview 模拟面试平台</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="bg-glow"></div>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="auth-wrap">
+    <div class="auth-brand">
+      <div class="auth-brand-inner">
+        <div class="auth-logo">
+          <div class="logo-icon">MI</div>
+          <span>MockInterview</span>
+        </div>
+        <h1 class="auth-headline">把每一次练习，<br>都变成<em>真实面试</em>的底气。</h1>
+        <p class="auth-desc">AI 驱动的模拟面试平台。视频 + 语音的真实面试体验，基于你的简历与目标岗位定制考题，结束后输出专业评分报告与改进建议。</p>
+        <ul class="auth-features">
+          <li class="auth-feature">
+            <div class="auth-feature-icon">🎥</div>
+            <div>
+              <h4>视频 + 语音面试</h4>
+              <p>摄像头与麦克风双检测，沉浸式实时对话</p>
+            </div>
+          </li>
+          <li class="auth-feature">
+            <div class="auth-feature-icon">🎯</div>
+            <div>
+              <h4>定制化考题</h4>
+              <p>AI 根据你的简历和岗位要求生成专属题目</p>
+            </div>
+          </li>
+          <li class="auth-feature">
+            <div class="auth-feature-icon">📊</div>
+            <div>
+              <h4>专业评分报告</h4>
+              <p>五维能力评估 + 逐题点评 + 可执行改进建议</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="auth-panel">
+      <div class="auth-card">
+        <h2 id="authTitle">欢迎回来</h2>
+        <p class="auth-sub" id="authSub">登录你的账号，开始模拟面试</p>
+
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">登录</button>
+          <button class="auth-tab" id="tabRegister" onclick="switchTab('register')">注册</button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">邮箱</label>
+          <input class="form-input" id="email" type="email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">密码</label>
+          <input class="form-input" id="password" type="password" placeholder="至少 6 位" autocomplete="current-password">
+        </div>
+        <div class="auth-error" id="authError"></div>
+        <button class="btn btn-primary btn-lg" id="submitBtn" onclick="submitAuth()" style="width:100%;">
+          登录
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let mode = 'login';
+
+    function switchTab(m) {
+      mode = m;
+      document.getElementById('tabLogin').classList.toggle('active', m === 'login');
+      document.getElementById('tabRegister').classList.toggle('active', m === 'register');
+      document.getElementById('submitBtn').textContent = m === 'login' ? '登录' : '创建账号';
+      document.getElementById('authTitle').textContent = m === 'login' ? '欢迎回来' : '创建账号';
+      document.getElementById('authSub').textContent = m === 'login' ? '登录你的账号，开始模拟面试' : '注册后即可开始你的第一次 AI 面试';
+      document.getElementById('authError').textContent = '';
+      document.getElementById('password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+    }
+
+    async function submitAuth() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const errEl = document.getElementById('authError');
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent = '请输入正确的邮箱'; return; }
+      if (!password || password.length < 6) { errEl.textContent = '密码至少 6 位'; return; }
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> 请稍候...';
+      errEl.textContent = '';
+
+      try {
+        const res = await fetch('/api/auth/' + mode, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errEl.textContent = data.error || '操作失败';
+          return;
+        }
+        location.href = '/';
+      } catch (e) {
+        errEl.textContent = '网络错误，请稍后再试';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = mode === 'login' ? '登录' : '创建账号';
+      }
+    }
+
+    document.getElementById('email').addEventListener('keydown', e => { if (e.key === 'Enter') submitAuth(); });
+    document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') submitAuth(); });
+  </script>
+</body>
+</html>
